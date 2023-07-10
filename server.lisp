@@ -127,10 +127,21 @@
   (log:debug "stopping ~a" handler))
 
 
+;; Connector
+
+(defclass connector ()
+  ())
+
+(defgeneric open (connector))
+(defgeneric close (connector))
+
 ;; Server
                  
 (defclass server (handler)
-  ((%thread-pool :initform nil))
+  ((%thread-pool :initform nil)
+   (%handler :initform nil)
+   (%connectors :initform nil)
+   (%dry-run-p :initform nil)
   (:documentation "
   This class is the main class for the HTTP server.
   It aggregates Connectors (HTTP request receivers) and request Handlers.
@@ -140,9 +151,45 @@
 
 (defparameter +version+ "0.1.0")
 
+(defparameter +version-stable-p+ nil)
+
 (defmethod start ((server server))
-  (log:info "Letty ~a" +version+))
+
+  (handler-case
+      (progn
+        (unless (slot-value server '%dry-run-p)
+          (dolist (connector (slot-value server '%connectors))
+            (handler-case
+                (open connector)
+              (t ()
+                (error "TODO: handle errors")))))
+        (log:info "Letty ~a" +version+)
+
+        (unless +version-stable-p+
+          (log:warn "THIS IS NOT A STABLE RELEASE! DO NOT USE IN PRODUCTION!"))
+
+        (dolist (connector (slot-value server '%connectors))
+          (handler-case
+              (start connector)
+            (t ()
+              (error "TODO: handle errors")
+              (dolist (connector (slot-value server '%connectors))
+                (stop connector))))))
+    
+    (t (c)
+      (dolist (connector (slot-value server '%connectors))
+        (handler-case
+            (close connector)
+          (t ()
+            (erorr "TODO handle errors")))))))
+  
+  
 
 (defmethod stop ((server server))
   (log:info "Stopped ~a" server))
+
+(defmethod join ((server server))
+  (error "TODO"))
+
+
   
