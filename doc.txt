@@ -1,0 +1,46 @@
+
+
+
+
+                             Server
+                               |
+                               |
+                               v
+                            HandlerWrapper
+                               |
+                               |
+                               v
+                        AbstractHandlerContainer
+                               |
+                               |
+                               v
+                          AbstractHandler
+                               |
+                               |
+                               v
+                    ContainerLifeCycle
+                               |
+                               |
+                               v
+                       AbstractLifeCycle  (calls doStart and doStop
+
+
+                                                                 
+
+                        ServerConnector
+                               |
+                               |
+                               v
+                    AbstractNetworkConnector
+                               |
+                               |
+                               v
+                     AbstractConnector
+                              |
+                              |
+                              v
+                     ContainerLifeCycle
+                              |
+                              |
+                              v
+                     AbstractLifeCycle
