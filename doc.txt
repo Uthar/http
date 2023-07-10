@@ -2,45 +2,40 @@
 
 
 
-                             Server
-                               |
-                               |
-                               v
-                            HandlerWrapper
-                               |
-                               |
-                               v
-                        AbstractHandlerContainer
-                               |
-                               |
-                               v
-                          AbstractHandler
-                               |
-                               |
-                               v
-                    ContainerLifeCycle
-                               |
-                               |
-                               v
-                       AbstractLifeCycle  (calls doStart and doStop
-
-
-                                                                 
-
-                        ServerConnector
-                               |
-                               |
-                               v
-                    AbstractNetworkConnector
-                               |
-                               |
-                               v
-                     AbstractConnector
-                              |
-                              |
-                              v
-                     ContainerLifeCycle
-                              |
-                              |
-                              v
-                     AbstractLifeCycle
+                             Server                          ServerConnector                         
+                               |                                    |                  
+                               |                                    |                  
+                               v                                    v                  
+                            HandlerWrapper               AbstractNetworkConnector      
+                               |                                    |                  
+                               |                                    |                  
+                               v                                    v                  
+                        AbstractHandlerContainer          AbstractConnector                         
+                               |                                   |                   
+                               |                                   |                   
+                               v                                   |               HttpConnectionFactory
+                          AbstractHandler                          |                        |
+                               |                                   |                        |
+                               |                                   |                        v
+                               v                                   v             AbstractConnectionFactory
+                               ----                             ----                        |
+                                   \->  ContainerLifeCycle <---/                            |
+                                                |          <--------------------------------+
+                                                |
+                                                v
+                                      AbstractLifeCycle  (calls doStart and doStop)
+             
+             
+             
+              
+             
+             
+             
+             
+             
+             
+             
+             
+             
+             
+             
