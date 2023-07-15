@@ -1,5 +1,6 @@
 (defpackage letty
   (:use #:cl)
+  (:shadow :open :close)
   (:import-from #:alexandria)
   (:import-from #:bordeaux-threads)
   (:import-from #:log4cl)
@@ -161,9 +162,6 @@
 (defmacro while (expr &body body)
   `(loop while ,expr do ,@body))
 
-(defun accept (id)
-  ;; TODO (kasper) implement)
-
 (defmethod run ((acceptor acceptor))
   (let* ((thread (bt:current-thread))
          (name (bt:thread-name thread)))
@@ -195,13 +193,7 @@
           
           ;; TODO(kasper) clean up thread
           nil)))))
-              
-            
-                    
-                
-    
-                       
-  
+
 (defmethod initialize-instance :after
     ((connector abstract-connector) &key acceptors)
   (let ((cores (get-cpu-count)))
@@ -224,18 +216,56 @@
       (error "No protocol factory for default protocol ~a" %default-protocol))
     ;; TODO(kasper) TLS
     ;; (when-let ((ssl (get-connection-factory :ssl-connection-factory)))
+    ))
     
-  
-
 ;; The {@link Executor} service is used to run all active tasks needed by this
 ;; connector such as accepting connections * or handle HTTP requests. The
 ;; default is to use the {@link Server#getThreadPool()} as an executor.
 ;;
 ;; I.E. use %thread-pool of the server
 
-(defclass server-connector (connector)
-  ((%port :initform 0))
+(defclass server-connector (abstract-connector)
+  ((%accept-channel :initform nil)
+   (%host :initform "0.0.0.0")
+   (%port :initform 0)
+   (%reuse-address-p :initform t)
+   (%accept-queue-size :initform 0)
+   (%manager :initform nil))
   (:documentation ""))
+
+(defmethod open-accept-channel ((connector server-connector))
+  (with-slots (%host %port %reuse-address-p %accept-queue-size)
+      connector
+    (usocket:socket-listen %host
+                           %port
+                           :reuseaddress %reuse-address-p
+                           :backlog %accept-queue-size
+                           :element-type '(unsigned-byte 8))))
+
+(defmethod open ((connector server-connector))
+  (with-slots (%accept-channel)
+      connector
+    (unless %accept-channel
+      (setf %accept-channel
+            (open-accept-channel connector))
+      ;; TODO(kasper) check if the socket was bound
+      )))
+
+(defmethod accept ((connector server-connector) id)
+  (with-slots (%accept-channel)
+      connector
+    (when %accept-channel ;; Usocket cant check if channel open :-(
+      (let ((channel (usocket:socket-accept %accept-channel)))
+        (accepted connector channel)))))
+
+(defmethod accepted ((connector server-connector) channel) ;;TODO(kasper) class
+  ())
+
+(defclass selector-manager ()
+  ((%executor :initform nil)
+   (%scheduler :initform nil)
+   (%selectors :initform nil)))
+               
 
 ;; Server
                  
@@ -256,7 +286,6 @@
 (defparameter +version-stable-p+ nil)
 
 (defmethod start ((server server))
-
   (handler-case
       (progn
         (unless (slot-value server '%dry-run-p)
@@ -277,7 +306,6 @@
               (error "TODO: handle errors")
               (dolist (connector (slot-value server '%connectors))
                 (stop connector))))))
-    
     (t (c)
       (dolist (connector (slot-value server '%connectors))
         (handler-case
@@ -285,7 +313,7 @@
           (t ()
             (erorr "TODO handle errors")))))))
   
-  
+
 
 (defmethod stop ((server server))
   (log:info "Stopped ~a" server))
